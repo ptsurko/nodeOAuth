@@ -15,11 +15,6 @@ app.use(express.logger('dev'));
 app.use(express.bodyParser());
 app.use(express.methodOverride());
 
-// development only
-if ('development' == app.get('env')) {
-  app.use(express.errorHandler());
-}
-
 app.get('/oauth/token', function(req, res) {
     var grantType = req.query.grant_type;
     if(grantType) {
@@ -46,7 +41,7 @@ app.get('/oauth/token', function(req, res) {
     } else {
         res.send(400, {error:"invalid_request", error_description:"Invalid grant type."})
     }
-})
+});
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
@@ -55,4 +50,4 @@ http.createServer(app).listen(app.get('port'), function(){
 
 function hasBasicSchema(authHeader) {
     return authHeader.split(' ').length >= 2 && authHeader.split(' ')[0].toLowerCase() != "bearer";
-};
+}
