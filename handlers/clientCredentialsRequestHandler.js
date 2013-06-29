@@ -8,8 +8,10 @@
 
 var helpers = require('./helpers'),
     util = require('./../utility'),
-    apiClientService = require('./../services/ApiClientService.js'),
-    atob = require('atob');
+    apiClientRepository = require('./../repositories/ApiClientRepository'),
+    accessClientRepository = require('./../repositories/AccessTokenRepository'),
+    atob = require('atob'),
+    btoa = require('btoa');
 
 exports.issueTokenForClientCredentials = function(req, res) {
     var scopes = req.query.scope ? req.query.scope.split(" ") : [];
@@ -22,17 +24,39 @@ exports.issueTokenForClientCredentials = function(req, res) {
         var client_id = credentials[0],
             secret_key = credentials[1];
 
-        apiClientService.findApiClientByClientIdAndSecret(client_id, secret_key, function(error, data) {
+        apiClientRepository.find(client_id, function(error, data) {
             if(error) {
-
+                res.send(500, {error: error});
             } else {
                 var invalidScopes = helpers.validateRequestedScopes(scopes, data.scopes);
                 if(invalidScopes && invalidScopes.length > 0) {
                     res.send(400, {error: "invalid_scopes", error_description: util.format("Unable to grant access for scopes '%s'.", invalidScopes.join(","))});
                 }
 
-                res.send(200, "test");
+                if(secret_key != data.secret_key) {
+                    res.send(400, {error: "invalid_client"});
+                } else {
+                    var accessToken = createAccessToken(client_id, scopes);
+                    accessClientRepository.saveAccessToken(accessToken, function(error, result) {
+                        if(error) {
+                            res.send(500, {error: error});
+                        } else {
+                            res.send(200, {
+                                access_token: btoa(JSON.stringify(result))
+                            })
+                        }
+                    });
+                }
             }
         });
     }
+}
+
+function createAccessToken(client_id, scopes) {
+    var current = new Date();
+    return {
+        scope: scopes,
+        client_id: client_id,
+        expiration: (new Date()).setDate(current.getDate() + 1)
+    };
 }

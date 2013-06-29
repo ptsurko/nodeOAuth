@@ -3,7 +3,7 @@ var express = require('express')
     , util = require('util')
     , path = require('path')
     , issueTokenForClientCredentials = require('./handlers/clientCredentialsRequestHandler').issueTokenForClientCredentials
-    , apiClientService = require('./services/ApiClientService.js');
+    , apiClientRepository = require('./repositories/ApiClientRepository');
 
 var app = express();
 
@@ -20,7 +20,9 @@ if ('development' == app.get('env')) {
 
 app.post('/oauth/token', function(req, res) {
     var grantType = req.query.grant_type;
-    if(grantType) {
+    if(!grantType) {
+        res.send(400, {error:"invalid_request", error_description:"Invalid grant type."});
+    } else {
         switch(grantType.toLowerCase()) {
             case "client_credentials" :
                 issueTokenForClientCredentials(req, res);
@@ -28,12 +30,19 @@ app.post('/oauth/token', function(req, res) {
             default:
                 res.send(400, {error: "unsupported_grant_type", error_description: util.format("Grant type '%s' is not supported.", grantType)});
         }
-    } else {
-        res.send(400, {error:"invalid_request", error_description:"Invalid grant type."})
     }
 })
 
+app.get('/oauth/verify_token', function (req, res) {
+    var access_token = req.query.access_token;
+    if(!access_token) {
+        res.send(400, {error:"invalid_request", error_description:"Missed 'access_token' query parameter."});
+    } else {
+
+    }
+});
+
 http.createServer(app).listen(app.get('port'), function(){
-    apiClientService.seed();
+    apiClientRepository.seed();
     console.log('Express server listening on port ' + app.get('port'));
 });
